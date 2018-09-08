@@ -1,0 +1,13 @@
+[Unit]
+Description=Start the doorbell service
+After=multi-user.target connect-tunnel.service
+
+[Service]
+User=pi
+EnvironmentFile=/home/pi/doorbell/env
+ExecStart=/usr/bin/python3 ${PROJECT_ROOT}/doorbell.py > ${PROJECT_ROOT}/logs/doorbell.log 2>&1
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,17 @@
+[Unit]
+Description=Keeps a tunnel to alexholyoake.com open
+After=network-online.target ssh.service
+
+[Service]
+User=pi
+EnvironmentFile=/home/pi/doorbell/env
+# -p [PORT]
+# -l [user]
+# -M 0 --> no monitoring
+# -N Just open the connection and do nothing (not interactive)
+# LOCALPORT:IP_ON_EXAMPLE_COM:PORT_ON_EXAMPLE_COM
+
+ExecStart=/home/pi/doorbell/connect_tunnel
+
+[Install]
+WantedBy=multi-user.target

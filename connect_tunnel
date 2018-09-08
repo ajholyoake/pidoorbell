@@ -1,0 +1,2 @@
+#!/bin/bash
+autossh  -N -T -o "ServerAliveInterval 30" -o "ServerAliveCountMax 3" -i ${KEY_FILE} -R ${REMOTE_PORT}:localhost:${LOCAL_PORT} ${SERVER_CONNECTION}
