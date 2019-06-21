@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
-from flask import Flask, request
+from flask import Flask, request, jsonify
 
 import RPi.GPIO as gpio
 import time
+import datetime
 import atexit
 import os
+from cryptography.fernet import Fernet
 import logging
 logging.basicConfig(filename='/home/pi/doorbell/logs/door.log', level=logging.DEBUG, format='%(asctime)s %(levelname)s %(name)s %(message)s')
 
@@ -14,6 +16,8 @@ gpio.setmode(gpio.BOARD)
 
 up_doorbell = None
 down_doorbell = None
+
+encryption_key = None
 
 class Relay(object):
     def __init__(self, pin=8, name=''):
@@ -37,27 +41,44 @@ class Relay(object):
 
 app = Flask('doorbell')
 
-@app.route('/', methods=['GET', 'POST'])
-def do_everything():
-    if request.method == 'POST':
-        print(request.form)
-        if request.form['role'] == 'updoorbell':
-            try:
-                duration = max(0,min(float(request.form['duration']),5))
-                up_doorbell.turn_on(duration)
-                return 'Success'
-            except:
-                return 'Fail'
-        elif request.form['role'] == 'downdoorbell':
-            try:
-                duration = max(0,min(float(request.form['duration']),5))
-                down_doorbell.turn_on(duration)
-                return 'Success'
-            except:
-                return 'Fail'
+def validate_token(token):
+    logging.info("Trying token {}".format(token))
+    cipher_suite = Fernet(encryption_key)
+    dt = cipher_suite.decrypt(token.encode()).decode()
+    dt = datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S.%f')
+    now = datetime.datetime.now()
+    return dt > now
 
+@app.route('/open', methods=['POST'])
+def open_door():
+    print(request.form)
+    
+    if 'token' not in request.form or not validate_token(request.form['token']):
+        return "Fail - invalid token"
+
+    if request.form['role'] == 'updoorbell':
+        try:
+            duration = max(0,min(float(request.form['duration']),5))
+            up_doorbell.turn_on(duration)
+            return 'Success'
+        except:
+            return 'Fail'
+    elif request.form['role'] == 'downdoorbell':
+        try:
+            duration = max(0,min(float(request.form['duration']),5))
+            down_doorbell.turn_on(duration)
+            return 'Success'
+        except:
+            return 'Fail'
     else:
-        return 'Doorbell'
+        return "Fail - incorrect form"
+
+@app.route('/token', methods=["GET"])
+def generate_token():
+    now = datetime.datetime.now()+datetime.timedelta(seconds=10)
+    cipher_suite = Fernet(encryption_key)
+    cipher_text = cipher_suite.encrypt(str(now).encode()).decode()
+    return jsonify({"token": cipher_text})
 
 if __name__ == '__main__':
     down_doorbell = Relay(8, name='downstairs')
@@ -71,9 +92,10 @@ if __name__ == '__main__':
 
     if port is None:
         from dotenv import load_dotenv
-        from pathlib import Path
-        load_dotenv(dotenv_path=Path('.') / 'env')
+        load_dotenv(dotenv_path='./env')
         port = os.environ['LOCAL_PORT']
+    
+    encryption_key = os.environ['ENCRYPTION_KEY']
 
-    app.run(port=port)
+    app.run(host="127.0.0.1",port=port,debug=False)
 
