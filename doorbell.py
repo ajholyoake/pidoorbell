@@ -51,21 +51,25 @@ def validate_token(token):
 
 @app.route('/open', methods=['POST'])
 def open_door():
-    print(request.form)
     
-    if 'token' not in request.form or not validate_token(request.form['token']):
+    j = request.get_json()
+    
+    if 'token' not in j or not validate_token(j['token']):
         return "Fail - invalid token"
 
-    if request.form['role'] == 'updoorbell':
+    if 'role' not in j:
+        return "Need Role"
+
+    if j['role'] == 'updoorbell':
         try:
-            duration = max(0,min(float(request.form['duration']),5))
+            duration = max(0,min(float(j.get('duration',3)),5))
             up_doorbell.turn_on(duration)
             return 'Success'
         except:
             return 'Fail'
-    elif request.form['role'] == 'downdoorbell':
+    elif j['role'] == 'downdoorbell':
         try:
-            duration = max(0,min(float(request.form['duration']),5))
+            duration = max(0,min(float(j.get('duration',3)),5))
             down_doorbell.turn_on(duration)
             return 'Success'
         except:
