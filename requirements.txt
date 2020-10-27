@@ -1,5 +1,5 @@
 click==6.7
-cryptography==1.7.1
+cryptography==3.2
 python-dotenv==0.10.3
 Flask==1.0.2
 idna==2.2
